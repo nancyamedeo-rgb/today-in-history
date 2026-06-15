@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>This Day in History</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Nunito", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+#combined-widget {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  position: relative;
+  transition: opacity 1s ease;
+}
+#combined-image-wrap {
+  flex: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.10);
+  animation: kenburns 30s ease-in-out infinite alternate;
+  position: relative;
+}
+#combined-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+#combined-bg-image {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  display: none;
+}
+#combined-image-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #1a1a2e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#combined-image-placeholder::after {
+  content: '📅';
+  font-size: 80px;
+  opacity: 0.15;
+  line-height: 1;
+}
+#combined-content {
+  flex: 2;
+  margin-top: 10px;
+  padding: 14px 18px;
+  background: rgba(0, 0, 0, 0.10);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+#combined-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0,0,0,1), 0 4px 10px rgba(0,0,0,.95);
+}
+#combined-year-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+#combined-year {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 3px 6px rgba(0,0,0,1), 0 6px 16px rgba(0,0,0,.95);
+}
+#combined-icon {
+  font-size: 30px;
+  line-height: 1;
+}
+#combined-headline {
+  font-size: 28px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0,0,0,1), 0 4px 10px rgba(0,0,0,.95);
+}
+#combined-detail {
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 400;
+  color: rgba(255,255,255,0.82);
+  text-shadow: 0 1px 3px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,.9);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#combined-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+  border-radius: 16px;
+  gap: 16px;
+}
+#combined-loading-icon {
+  font-size: 64px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+#combined-loading-text {
+  font-size: 32px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.8);
+  letter-spacing: 1px;
+}
+#combined-loading.hidden {
+  display: none;
+}
+.fade-out {
+  opacity: 0;
+}
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.15); }
+}
+</style>
+</head>
+<body>
+
+<div id="combined-widget">
+  <div id="combined-image-wrap">
+    <img id="combined-image" src="" alt="" />
+    <div id="combined-bg-image"></div>
+    <div id="combined-image-placeholder"></div>
+  </div>
+  <div id="combined-content">
+    <div id="combined-title"></div>
+    <div id="combined-year-row">
+      <span id="combined-year"></span>
+      <span id="combined-icon"></span>
+    </div>
+    <div id="combined-headline"></div>
+    <div id="combined-detail"></div>
+  </div>
+  <div id="combined-loading">
+    <div id="combined-loading-icon">⏳</div>
+    <div id="combined-loading-text">Loading today's history…</div>
+  </div>
+</div>
+
+<script>
+// ─── Config ────────────────────────────────────────────────────────────────
+const ROTATE_INTERVAL = 60000; // ms between slides
+
+// ─── Keyword classifiers ───────────────────────────────────────────────────
+const SPORTS_KEYWORDS = [
+  'championship','world series','super bowl','nba','nfl','nhl','mlb','olympic',
+  'olympics','gold medal','marathon','tennis','wimbledon','tour de france',
+  'soccer','football','baseball','basketball','hockey','golf','boxing','ufc',
+  'world cup','grand slam','nascar','formula','indy 500','kentucky derby',
+  'athlete','stadium','league','scored','defeated','won the','championship game',
+  'bowl game','pennant','playoff'
+];
+const MUSIC_KEYWORDS = [
+  'album','song','band','singer','musician','grammy','billboard','chart',
+  'concert','tour','record label','number one','hit single','rock','pop',
+  'jazz','blues','hip-hop','rapper','rapper','guitarist','drummer','pianist',
+  'symphony','orchestra','opera','beatles','rolling stones','michael jackson',
+  'elvis','bowie','queen','woodstock','mtv','music video'
+];
+const HOLLYWOOD_KEYWORDS = [
+  'film','movie','actor','actress','oscar','academy award','director','studio',
+  'box office','premiere','television','tv show','series','emmy','sitcom',
+  'broadway','theater','theatre','musical','hollywood','cinema','cartoon',
+  'animated','pixar','disney','marvel','dc comics','blockbuster','sequel'
+];
+
+function classifyEvent(text) {
+  const lower = text.toLowerCase();
+  const sportsScore  = SPORTS_KEYWORDS.filter(k => lower.includes(k)).length;
+  const musicScore   = MUSIC_KEYWORDS.filter(k => lower.includes(k)).length;
+  const hollywoodScore = HOLLYWOOD_KEYWORDS.filter(k => lower.includes(k)).length;
+
+  if (sportsScore > 0 && sportsScore >= musicScore && sportsScore >= hollywoodScore) {
+    return { title: '🏆 THIS DAY IN SPORTS', icon: pickSportsIcon(lower) };
+  }
+  if (musicScore > 0 && musicScore >= hollywoodScore) {
+    return { title: '♪ THIS DAY IN MUSIC', icon: '♪' };
+  }
+  if (hollywoodScore > 0) {
+    return { title: '🎬 THIS DAY IN HOLLYWOOD', icon: '🎬' };
+  }
+  return { title: '📜 THIS DAY IN HISTORY', icon: '📜' };
+}
+
+function pickSportsIcon(lower) {
+  if (lower.includes('football') || lower.includes('nfl') || lower.includes('super bowl')) return '🏈';
+  if (lower.includes('basketball') || lower.includes('nba')) return '🏀';
+  if (lower.includes('baseball') || lower.includes('mlb') || lower.includes('world series')) return '⚾';
+  if (lower.includes('hockey') || lower.includes('nhl')) return '🏒';
+  if (lower.includes('soccer') || lower.includes('world cup')) return '⚽';
+  if (lower.includes('tennis') || lower.includes('wimbledon')) return '🎾';
+  if (lower.includes('golf')) return '⛳';
+  if (lower.includes('olympic') || lower.includes('gold medal')) return '🥇';
+  return '🏆';
+}
+
+// ─── Utilities ─────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// Extract the most likely Wikipedia article title from a Wikipedia event's
+// linked pages array (first page), or fall back to the first word(s) of text.
+function extractImageSearchTerms(item) {
+  const terms = [];
+  // Use Wikipedia's own linked pages — usually the most relevant subject
+  if (item.pages && item.pages.length > 0) {
+    item.pages.forEach(p => { if (p.title) terms.push(p.title); });
+  }
+  return terms.slice(0, 4); // top 4 linked page titles
+}
+
+async function fetchWikipediaImage(searchTerms) {
+  for (const term of searchTerms) {
+    try {
+      const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(term)}&prop=pageimages&pithumbsize=400&format=json&origin=*`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const pages = data.query && data.query.pages;
+      if (!pages) continue;
+      const page = Object.values(pages)[0];
+      if (page && page.thumbnail && page.thumbnail.source) return page.thumbnail.source;
+    } catch { continue; }
+  }
+  return null;
+}
+
+// ─── Data fetching (100% free Wikipedia) ──────────────────────────────────
+async function fetchAllWikipediaData(month, day) {
+  // The /all endpoint returns events, births, deaths, holidays in one call
+  const res = await fetch(
+    `https://en.wikipedia.org/api/rest_v1/feed/onthisday/all/${month}/${day}`
+  );
+  if (!res.ok) throw new Error(`Wikipedia API error: ${res.status}`);
+  return res.json();
+}
+
+function buildItems(wikiData) {
+  const items = [];
+
+  // ── Events (history, sports, music, hollywood) ─────────────────────────
+  const events = (wikiData.events || []).filter(e =>
+    e.text && e.text.length > 40 && e.text.length < 300
+  );
+  shuffle(events);
+  events.slice(0, 18).forEach(e => {
+    const { title, icon } = classifyEvent(e.text);
+    const imageSearch = extractImageSearchTerms(e);
+    const thumbSrc = e.pages && e.pages[0] && e.pages[0].thumbnail
+      ? e.pages[0].thumbnail.source : null;
+    items.push({
+      title, icon,
+      year: e.year,
+      headline: e.text,
+      detail: '',
+      imageSearch,
+      bgImage: thumbSrc,
+      img: null,
+    });
+  });
+
+  // ── Births ─────────────────────────────────────────────────────────────
+  const births = (wikiData.births || []).filter(b =>
+    b.text && b.text.length > 10
+  );
+  shuffle(births);
+  births.slice(0, 8).forEach(b => {
+    // text is like "1926 – Marilyn Monroe, American actress (d. 1962)"
+    const name = b.pages && b.pages[0] ? b.pages[0].title : b.text.replace(/^\d+\s*[–-]\s*/, '').split(',')[0];
+    const detail = b.text.replace(/^\d+\s*[–-]\s*/, '');
+    const imageSearch = extractImageSearchTerms(b);
+    items.push({
+      title: '🎂 FAMOUS BIRTHDAYS',
+      icon: '🎂',
+      year: b.year,
+      headline: name,
+      detail,
+      imageSearch,
+      bgImage: null,
+      img: null,
+    });
+  });
+
+  // ── Deaths ─────────────────────────────────────────────────────────────
+  const deaths = (wikiData.deaths || []).filter(d =>
+    d.text && d.text.length > 10
+  );
+  shuffle(deaths);
+  deaths.slice(0, 6).forEach(d => {
+    const name = d.pages && d.pages[0] ? d.pages[0].title : d.text.replace(/^\d+\s*[–-]\s*/, '').split(',')[0];
+    const detail = d.text.replace(/^\d+\s*[–-]\s*/, '');
+    const imageSearch = extractImageSearchTerms(d);
+    items.push({
+      title: '🕯️ ON THIS DAY',
+      icon: '🕯️',
+      year: d.year,
+      headline: name,
+      detail,
+      imageSearch,
+      bgImage: null,
+      img: null,
+    });
+  });
+
+  shuffle(items);
+  return items;
+}
+
+async function buildAllEvents() {
+  const today = new Date();
+  const month = today.getMonth() + 1;
+  const day   = today.getDate();
+
+  const wikiData = await fetchAllWikipediaData(month, day);
+  const items = buildItems(wikiData);
+
+  // Fetch images in parallel (best-effort)
+  await Promise.all(items.map(async (item) => {
+    if (item.bgImage) return; // already have one from Wikipedia thumbnail
+    if (item.imageSearch && item.imageSearch.length) {
+      item.img = await fetchWikipediaImage(item.imageSearch);
+    }
+  }));
+
+  return items;
+}
+
+// ─── Display logic ─────────────────────────────────────────────────────────
+let allEvents = [];
+let current   = 0;
+
+async function init() {
+  try {
+    allEvents = await buildAllEvents();
+    document.getElementById('combined-loading').classList.add('hidden');
+    showEvent();
+    setInterval(showEvent, ROTATE_INTERVAL);
+  } catch (err) {
+    console.error('Widget error:', err);
+    document.getElementById('combined-loading-icon').textContent = '✕';
+    document.getElementById('combined-loading-text').textContent = 'Error: ' + err.message;
+  }
+}
+
+function showEvent() {
+  const widget = document.getElementById('combined-widget');
+  widget.classList.add('fade-out');
+
+  setTimeout(() => {
+    const e = allEvents[current];
+
+    document.getElementById('combined-title').textContent    = e.title;
+    document.getElementById('combined-year').textContent     = e.year;
+    document.getElementById('combined-icon').textContent     = e.icon;
+    document.getElementById('combined-headline').textContent = e.headline;
+    document.getElementById('combined-detail').textContent   = e.detail || '';
+
+    const img         = document.getElementById('combined-image');
+    const bgImg       = document.getElementById('combined-bg-image');
+    const placeholder = document.getElementById('combined-image-placeholder');
+
+    img.style.display   = 'none';
+    bgImg.style.display = 'none';
+    placeholder.style.display = 'flex';
+
+    if (e.bgImage) {
+      bgImg.style.backgroundImage = `url(${e.bgImage})`;
+      bgImg.style.display   = 'block';
+      placeholder.style.display = 'none';
+    } else if (e.img) {
+      img.onload  = () => { img.style.display = 'block'; placeholder.style.display = 'none'; };
+      img.onerror = () => { img.style.display = 'none';  placeholder.style.display = 'flex'; };
+      img.src = e.img;
+    }
+
+    current = (current + 1) % allEvents.length;
+    widget.classList.remove('fade-out');
+  }, 1000);
+}
+
+init();
+</script>
+</body>
+</html>
